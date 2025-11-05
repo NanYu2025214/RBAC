@@ -1,0 +1,1 @@
+这是一个基于SSM框架开发的一个简易RBAC学生管理系统，能实现管理员登陆注册进行学生增删改查以及分数管理。使用了Spring、SpringMVC、Mybatis、MySQL、JavaScript、ajax等技术栈
