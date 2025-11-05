@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户列表</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div id="overlay"></div> <!-- 添加遮罩层 -->
+    <div class="user-list-container">
+        <h1 style="font-size: 18px; margin-bottom: 20px;">用户列表</h1>
+        
+        <div class="action-bar">
+            <button class="primary-btn">添加用户</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody">
+                <!-- 数据由JS动态填充 -->
+            </tbody>
+        </table>
+        <div id="pagination" class="pagination"></div>
+        <div id="userModal" class="modal">
+            <h3 id="modalTitle" class="modal-title">添加用户</h3>
+            <form id="userForm" class="modal-form">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label>用户名:</label>
+                    <input type="text" id="username" autocomplete="username" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>密码:</label>
+                    <input type="password" id="password" autocomplete="current-password" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>角色:</label>
+                    <div class="checkbox-group" id="rolesBody">
+                        <label><input type="checkbox" name="role" value="系统管理员"> 系统管理员</label>
+                        <label><input type="checkbox" name="role" value="审计员"> 审计员</label>
+                        <label><input type="checkbox" name="role" value="操作员"> 操作员</label>
+                        <label><input type="checkbox" name="role" value="访客"> 访客</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>状态:</label>
+                    <select id="status" class="form-select">
+                        <option value="1">启用</option>
+                        <option value="0">禁用</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn">取消</button>
+                    <button type="submit" class="submit-btn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function() {
+            // 遮盖层
+            const $overlay =$('#overlay')
+
+            let users = [];
+            let roles=[];
+
+            let currentPage = 1;
+            let totalPages = 1;
+            let pagesize= 5;
+            function fetchUsers(page = currentPage) {
+                currentPage = page
+                $.ajax({
+                    url: 'http://localhost:80/usercontroller/findAllUser?currentpage='+currentPage+'&pagesize='+pagesize, // 替换为你的实际接口地址
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        users = response.data;
+                        totalPages =Math.ceil(response.count/pagesize);
+                        renderUserTable();
+                        renderPagination()
+                    },
+                    error: function(xhr, status, error) {
+
+                        console.error('Error fetching users:', error);
+                    }
+                });
+            }
+
+            function renderRolesTable() {
+                $.ajax({
+                    url: 'http://localhost:80/rolescontroller/findAllRoles', // 替换为你的实际接口地址
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.code==200){
+                            roles = response.data;
+                            const $rbody = $('#rolesBody').empty();
+                            roles.forEach(role => {
+                                $rbody.append(`
+                                    <label><input type="checkbox" name="role" value="${role.role_id}"> ${role.role_name}</label>
+                                `);
+                            })
+                        }
+                    },
+                    error: function(xhr, status, error) {
+
+                        console.error('Error fetching roles:', error);
+                    }
+                });
+            }
+            // 模态框控制
+            function showModal(type, userId = null) {
+                const $modal = $('#userModal');
+                const $roleCheckboxes = $('input[name="role"]');
+
+                if(type === 'edit') {
+                    const user = users.find(u => u.id == userId);
+                    $('#modalTitle').text('编辑用户');
+                    $('#userId').val(user.id);
+                    $('#username').val(user.username);
+                    $('#password').val(user.password);
+                    $('#status').val(user.status);
+                    
+                    $roleCheckboxes.each(function() {
+                        const checkboxroleId = $(this).val(); // 获取当前复选框的id
+                        const isChecked = user.roles.some(role=>{
+                             return role.role_id.toString()===checkboxroleId;
+                        })
+                        $(this).prop('checked', isChecked);
+                    });
+                    //$('#password').prop('required', false);
+                } else {
+                    $('#modalTitle').text('添加用户');
+                    $('#userForm')[0].reset();
+                    $roleCheckboxes.prop('checked', false);
+                    $('#password').prop('required', true);
+                }
+                $modal.show();
+                $overlay.show();
+            }
+        
+            function closeModal() {
+                $('#userModal').hide();
+                $('#overlay').hide();
+            }
+        
+            // 表单提交处理
+            $('#userForm').on('submit', function(event) {
+                event.preventDefault();
+                const roles = $('input[name="role"]:checked').map(function() {
+                    return $(this).val();
+                }).get();
+        
+                const userData = {
+                    id: $('#userId').val(),
+                    username: $('#username').val().trim(),
+                    password: $('#password').val(),
+                    roles: roles,
+                    status: $('#status').val()
+                };
+        
+                if(userData.id) {
+                    // 更新用户
+                    $.ajax({
+                        url:'http://localhost:80/usercontroller/updateUser',
+                         type: 'POST',
+                         contentType: 'application/json;charset=utf-8',
+                         data:JSON.stringify(userData),
+                          dataType: 'json',
+                         success: function(response) {
+                              if (response.code==200) {
+                                   alert('更新成功');
+                                  fetchUsers();
+                                  closeModal();
+                              }
+                         },
+                         error: function(xhr, status, error) {
+                             alert( '操作失败！',error)
+                         }
+                    })
+                } else {
+                    // 新增用户
+                    $.ajax({
+                        url: 'http://localhost:80/usercontroller/addUser', // 替换为你的实际登录接口
+                        type: 'POST',
+                        contentType: 'application/json;charset=utf-8',
+                        data:JSON.stringify(userData),
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.code==200) {
+                                fetchUsers(); // 刷新用户列表
+                                closeModal();
+                                alert('操作成功')
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            alert( '操作失败！',error)
+                        }
+                    });
+                }
+
+            });
+        
+            // 删除用户
+            $(document).on('click', '[data-action="delete"]', function() {
+                const userId = $(this).data('id');
+                if(confirm('确定要删除该用户吗？')) {
+                    // users = users.filter(u => u.id != userId);
+                    $.ajax({
+                        url:'http://localhost:80/usercontroller/delUser',
+                        type:'POST',
+                        data:JSON.stringify(userId),
+                        dataType: 'json',
+                        contentType:  'application/json;charset=utf-8',
+                        success: function(response) {
+                             if (response.code==200) {
+                                fetchUsers(); // 刷新用户列表
+                                alert('删除成功')
+                            }
+                        }
+                    })
+                }
+            });
+            //分页
+            function renderPagination() {
+                const $pagination = $('#pagination').empty();
+
+                // 添加首页按钮
+                const $firstPage = $('<button>').text('首页').addClass('page-link');
+                if (currentPage === 1) {
+                    $firstPage.prop('disabled', true);
+                }
+                $firstPage.on('click', function() {
+                    fetchUsers(1);
+                });
+                $pagination.append($firstPage);
+
+                // 添加上一页按钮
+                const $prevPage = $('<button>').text('上一页').addClass('page-link');
+                if (currentPage === 1) {
+                    $prevPage.prop('disabled', true);
+                }
+                $prevPage.on('click', function() {
+                    fetchUsers(currentPage - 1);
+                });
+                $pagination.append($prevPage);
+
+                if (totalPages > 0) {
+                    for (let i = 1; i <= totalPages; i++) {
+                        const $pageLink = $('<button>').text(i).addClass('page-link');
+                        if (i === currentPage) {
+                            $pageLink.addClass('active');
+                        }
+                        $pageLink.on('click', function() {
+                            fetchUsers(i);
+                        });
+                        $pagination.append($pageLink);
+                    }
+                }
+
+                // 添加下一页按钮
+                const $nextPage = $('<button>').text('下一页').addClass('page-link');
+                if (currentPage === totalPages) {
+                    $nextPage.prop('disabled', true);
+                }
+                $nextPage.on('click', function() {
+                    fetchUsers(currentPage + 1);
+                });
+                $pagination.append($nextPage);
+
+                // 添加尾页按钮
+                const $lastPage = $('<button>').text('尾页').addClass('page-link');
+                if (currentPage === totalPages) {
+                    $lastPage.prop('disabled', true);
+                }
+                $lastPage.on('click', function() {
+                    fetchUsers(totalPages);
+                });
+                $pagination.append($lastPage);
+            }
+            // 渲染表格
+            function renderUserTable() {
+                const $tbody = $('#userTableBody').empty();
+                
+                users.forEach(user => {
+                    const roles = user.roles?user.roles.map(function (role) {
+                        return role.role_name||"未知角色";
+                        }).join(','):"无角色";
+                    $tbody.append(`
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.username}</td>
+                            <td>${roles}</td>
+                            <td>
+                                <span style="color: ${user.status === '1' ? '#67C23A' : '#F56C6C'}">
+                                    ${user.status === '1' ? '启用' : '禁用'}
+                                </span>
+                            </td>
+                            <td>
+                                <button  data-action="edit"  data-id="${user.id}">编辑</button>
+                                <button data-action="delete" data-id="${user.id}" style="margin-left:10px">删除</button>
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
+            // 事件绑定
+            $(document)
+               .on('click', '.primary-btn', () => showModal('add'))
+               .on('click', '[data-action="edit"]', function() {
+                    showModal('edit', $(this).data('id'));
+                })
+               .on('click', '.cancel-btn', closeModal)
+               .on('click', function(event) {
+                    if(event.target === $('#userModal')[0]) closeModal();
+                });
+
+
+            // 初始化
+            fetchUsers();
+            // 初始化角色列表
+            renderRolesTable()
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>RBAC管理系统</title>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <style>
+       /* 页面基础样式 */
+        body {
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    
+    
+    <div class="sidebar">
+        <div class="toggle-btn">☰</div>
+        <div class="sidebar-header">管理系统</div>
+        
+        <div class="menu">
+            <div class="menu-item">
+                <div class="menu-title">仪表盘</div>
+            </div>
+            
+            <div class="menu-item">
+                <div class="menu-title">
+                    <span>用户管理</span>
+                    <span class="arrow">▶</span>
+                </div>
+                <div class="submenu">
+                    <div class="submenu-item" data-url="user_list.html">账号管理</div>
+                    <div class="submenu-item" data-url="role_manage.html">角色管理</div>
+					<div class="submenu-item" data-url="permission_manage.html">权限管理</div>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <div class="menu-title">
+                    <span>成绩管理</span>
+                    <span class="arrow">▶</span>
+                </div>
+                <div class="submenu">
+                    <div class="submenu-item" data-url="add_score.html">管理成绩</div>
+                </div>
+            </div>
+
+            <div class="menu-item">
+                <div class="menu-title">
+                    <span>系统设置</span>
+                    <span class="arrow">▶</span>
+                </div>
+                <div class="submenu">
+                    <div class="submenu-item" data-url="sys_config.html">系统配置</div>
+                    <div class="submenu-item" data-url="log_manage.html">日志管理</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <iframe id="content-frame" src="dashboard.html"></iframe>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // 点击切换按钮时折叠侧边栏
+            $('.toggle-btn').click(function() {
+                $('.sidebar').toggleClass('collapsed');
+                $('.main-content').toggleClass('expanded');
+            });
+
+            // 菜单展开/收起
+            $('.menu-title').click(function() {
+                const $parent = $(this).closest('.menu-item');
+                const $submenu = $parent.find('.submenu');
+                const $arrow = $parent.find('.arrow');
+                
+                if ($submenu.is(':visible')) {
+                    $submenu.slideUp();
+                    $arrow.removeClass('open');
+                } else {
+                    $('.submenu').slideUp();
+                    $('.arrow').removeClass('open');
+                    $submenu.slideDown();
+                    $arrow.addClass('open');
+                }
+            });
+
+            // 加载内容
+            $('.submenu-item').click(function() {
+                const url = $(this).data('url');
+                $('#content-frame').attr('src', url);
+            });
+
+            // 仪表盘点击
+            $('.menu-item:first .menu-title').click(function() {
+                $('#content-frame').attr('src', 'dashboard.html');
+            });
+        });
+    </script>
+</body>
+</html>

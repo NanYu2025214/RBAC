@@ -1,0 +1,50 @@
+1、添加插件
+<div id="pagination" class="pagination"></div>
+2、添加样式
+.pagination {
+    margin-top: 20px;
+}
+
+.page-link {
+    background: white;
+    border: 1px solid #dcdfe6;
+    color: #606266;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-right: 5px;
+}
+
+.page-link:hover {
+    border-color: #409EFF;
+    color: #409EFF;
+}
+
+.page-link.active {
+    background: #409EFF;
+    color: white;
+}
+3、修改JS
+let users = [];
+let currentPage = 1;
+let totalPages = 1;
+let pagesize= 2;
+
+
+// 渲染分页控件
+function renderPagination() {
+    const $pagination = $('#pagination').empty();
+    if (totalPages > 0) {
+        for (let i = 1; i <= totalPages; i++) {
+            const $pageLink = $('<button>').text(i).addClass('page-link');
+            if (i === currentPage) {
+                $pageLink.addClass('active');
+            }
+            $pageLink.on('click', function() {
+                findAllUser(i);
+            });
+            $pagination.append($pageLink);
+        }
+    }
+}

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简仪表盘</title>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #4a6fa5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .logout-btn {
+            padding: 8px 15px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-title {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        @media (max-width: 600px) {
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>仪表盘</h1>
+    <div class="user-info">
+        <div class="avatar" id="avatar">A</div>
+        <button class="logout-btn" id="logoutBtn">退出登录</button>
+    </div>
+</div>
+
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-title">今日访客</div>
+        <div class="stat-value" id="todayVisitors">0</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-title">用户总数</div>
+        <div class="stat-value" id="totalUsers">0</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-title">角色总数</div>
+        <div class="stat-value" id="totalRoles">0</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-title">权限总数</div>
+        <div class="stat-value" id="totalPermissions">0</div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // 模拟数据
+        let dashboardData = {
+            username: 'A',
+            todayVisitors: 0,
+            totalUsers: 0,
+            totalRoles: 0,
+            totalPermissions: 0
+        };
+
+
+        function renderDashboard() {
+            $.ajax({
+                url: 'http://localhost:80/dashcontroller/findAll',
+                type: 'GET',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (response) {
+                    if (response.code == 200) {
+                        dashboardData = response.data;
+                        getUserData()
+                        console.log(dashboardData)
+                        updateDashboardUI()
+                    }
+                }
+            })
+        }
+        function getUserData(){
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.log('未检测到登录凭证，请重新登录');
+                return;
+            }
+            $.ajax({
+                url: 'http://localhost:80/dashcontroller/getUser',
+                type: 'GET',
+                dataType: 'json',
+                headers: {
+                    'Authorization': 'Bearer ' +token
+                },
+                contentType: 'application/json',
+                success: function (response) {
+                    if (response.code == 200) {
+                        dashboardData.username = response.data
+                    }
+                }
+            })
+        }
+
+        // 刷新数据
+
+
+
+        // 初始化数据
+        function updateDashboardUI() {
+            document.getElementById('avatar').textContent = dashboardData.username;
+            document.getElementById('todayVisitors').textContent = dashboardData.todayVisitors;
+            document.getElementById('totalUsers').textContent = dashboardData.totalUsers;
+            document.getElementById('totalRoles').textContent = dashboardData.totalRoles;
+            document.getElementById('totalPermissions').textContent = dashboardData.totalPermissions;
+        }
+            // 退出登录按钮点击事件
+            document.getElementById('logoutBtn').addEventListener('click', function () {
+                alert('您已退出登录');
+                // 实际应用中这里应该跳转到登录页或执行退出逻辑
+            });
+
+            // 头像点击事件
+            document.getElementById('avatar').addEventListener('click', function () {
+                alert(`当前用户: ${dashboardData.username}`);
+            });
+
+
+        renderDashboard()
+
+    })
+</script>
+</body>
+</html>
